@@ -1,6 +1,10 @@
-name: Manual PHP API deployment
+
+name: Deploy PHP API
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -12,7 +16,9 @@ concurrency:
 
 jobs:
   deploy:
+    name: Deploy to VPS
     runs-on: ubuntu-latest
+
     steps:
       - name: Check out
         uses: actions/checkout@v4
@@ -36,16 +42,22 @@ jobs:
         run: |
           test -n "$DEPLOY_KEY" || { echo "Missing WECHATMINIPROGRAM secret"; exit 1; }
           test -n "$DEPLOY_KNOWN_HOSTS" || { echo "Missing DEPLOY_KNOWN_HOSTS secret"; exit 1; }
+
           install -d -m 700 ~/.ssh
+
           printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/id_ed25519
           printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
           chmod 600 ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/known_hosts
 
       - name: Deploy from Actions runner to VPS
-        run: php vendor/bin/dep deploy production --no-interaction
+        run: |
+          php vendor/bin/dep deploy production --no-interaction
 
       - name: Verify loopback health endpoint
         run: |
-          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes deploy@202.61.241.19 \
-            "curl --noproxy '*' --fail --silent --show-error --max-time 10 http://127.0.0.1:8080/health | grep -F '\"status\":\"ok\"'"
+          ssh -o BatchMode=yes \
+              -o StrictHostKeyChecking=yes \
+              deploy@202.61.241.19 \
+              "curl --noproxy '*' --fail --silent --show-error --max-time 10 http://127.0.0.1:8080/health | grep -F '\"status\":\"ok\"'"
