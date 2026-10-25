@@ -17,7 +17,7 @@ set('bin/php', 'php8.5');
 
 host('production')
     ->setHostname('202.61.241.19')
-    ->setRemoteUser('deploy');
+    ->set('remote_user', 'deploy');
 
 task('deploy', [
     'deploy:prepare',
