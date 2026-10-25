@@ -1,0 +1,51 @@
+name: Manual PHP API deployment
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: miniapp-api-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up PHP 8.5
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          tools: composer:v2
+
+      - name: Validate and install
+        run: |
+          composer validate --strict --no-check-publish
+          composer install --no-interaction --prefer-dist --no-progress
+          php -l public/index.php
+
+      - name: Configure SSH
+        env:
+          DEPLOY_KEY: ${{ secrets.WECHATMINIPROGRAM }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          test -n "$DEPLOY_KEY" || { echo "Missing WECHATMINIPROGRAM secret"; exit 1; }
+          test -n "$DEPLOY_KNOWN_HOSTS" || { echo "Missing DEPLOY_KNOWN_HOSTS secret"; exit 1; }
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Deploy from Actions runner to VPS
+        run: php vendor/bin/dep deploy production --no-interaction
+
+      - name: Verify loopback health endpoint
+        run: |
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes deploy@202.61.241.19 \
+            "curl --noproxy '*' --fail --silent --show-error --max-time 10 http://127.0.0.1:8080/health | grep -F '\"status\":\"ok\"'"
