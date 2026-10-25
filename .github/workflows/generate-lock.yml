@@ -1,0 +1,38 @@
+name: Generate composer.lock for initial setup
+
+on:
+  push:
+    branches:
+      - setup/manual-deployer
+    paths:
+      - .github/workflows/generate-lock.yml
+
+permissions:
+  contents: write
+
+jobs:
+  lockfile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          tools: composer:v2
+
+      - name: Resolve and validate PHP dependencies
+        run: |
+          composer update --no-install --no-interaction --prefer-dist --no-progress --no-scripts
+          composer validate --strict --no-check-publish
+          test -s composer.lock
+
+      - name: Commit generated lock file to setup branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add composer.lock
+          git diff --cached --quiet || git commit -m "build: lock composer dependencies for PHP 8.5"
+          git push origin HEAD:setup/manual-deployer
