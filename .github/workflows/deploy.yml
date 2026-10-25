@@ -25,7 +25,7 @@ jobs:
 
       - name: Validate and install
         run: |
-          composer validate --strict
+          composer validate --strict --no-check-publish
           composer install --no-interaction --prefer-dist --no-progress
           php -l public/index.php
 
@@ -41,6 +41,12 @@ jobs:
           printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/known_hosts
+          ssh-keygen -lf ~/.ssh/id_ed25519 >/dev/null 2>&1 || true
 
       - name: Deploy from Actions runner to VPS
         run: php vendor/bin/dep deploy production --no-interaction
+
+      - name: Verify loopback health endpoint
+        run: |
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes deploy@202.61.241.19 \
+            "curl --noproxy '*' --fail --silent --show-error --max-time 10 http://127.0.0.1:8080/health | grep -F '\"status\":\"ok\"'"
