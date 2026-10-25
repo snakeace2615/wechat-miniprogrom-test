@@ -9,5 +9,12 @@ if ($path === '/health') {
     echo json_encode(['status' => 'ok'], JSON_THROW_ON_ERROR);
     exit;
 }
+
+// Lightweight endpoint for verifying the GitHub Actions deployment.
+if ($path === '/ping') {
+    echo json_encode(['message' => 'pong'], JSON_THROW_ON_ERROR);
+    exit;
+}
+
 http_response_code(404);
 echo json_encode(['error' => 'Not found'], JSON_THROW_ON_ERROR);
