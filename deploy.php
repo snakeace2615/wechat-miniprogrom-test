@@ -13,8 +13,7 @@ set('keep_releases', 5);
 set('bin/php', '/usr/bin/php8.5');
 set('bin/composer', '/usr/bin/php8.5 /usr/local/bin/composer');
 
-// The starter app uses no production secrets. When the real API
-// is introduced, provide the production .env via shared/.env.
+// PostgreSQL credentials are provided by the VPS shared/.env.
 set('shared_files', ['.env']);
 set('shared_dirs', []);
 set('writable_dirs', []);
@@ -23,9 +22,14 @@ host('production')
     ->setHostname('202.61.241.19')
     ->set('remote_user', 'deploy');
 
+task('database:migrate', function () {
+    run('{{bin/php}} {{release_path}}/scripts/migrate.php');
+});
+
 task('deploy', [
     'deploy:prepare',
     'deploy:vendors',
+    'database:migrate',
     'deploy:publish',
 ]);
 

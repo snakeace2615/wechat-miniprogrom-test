@@ -27,13 +27,14 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.5'
+          extensions: pdo_pgsql
           tools: composer:v2
 
       - name: Validate and install
         run: |
           composer validate --strict --no-check-publish
           composer install --no-interaction --prefer-dist --no-progress
-          php -l public/index.php
+          composer check
 
       - name: Configure SSH
         env:
@@ -55,9 +56,9 @@ jobs:
         run: |
           php vendor/bin/dep deploy production --no-interaction
 
-      - name: Verify loopback health endpoint
+      - name: Verify loopback health endpoints
         run: |
           ssh -o BatchMode=yes \
               -o StrictHostKeyChecking=yes \
               deploy@202.61.241.19 \
-              "curl --noproxy '*' --fail --silent --show-error --max-time 10 http://127.0.0.1:8080/health | grep -F '\"status\":\"ok\"'"
+              "curl --noproxy '*' --fail --silent --show-error --max-time 10 http://127.0.0.1:8080/health | grep -F '\"status\":\"ok\"' && curl --noproxy '*' --fail --silent --show-error --max-time 10 http://127.0.0.1:8080/health/database | grep -F '\"database\":\"ok\"'"
